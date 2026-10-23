@@ -34,13 +34,13 @@ reflect the current posture.
 
 - **Event-driven posture**: reports `closed`, `half-open`, and `fully-open`
   directly from the OS posture status. No continuous-angle bucketing, no
-  self-animating loops. The native side emits **only when the posture (or
-  orientation) actually changes**, not on a timer.
+  self-animating loops. The native side emits **only when the posture actually
+  changes**, not on a timer.
 - **MethodChannel + EventChannel bridge**: subscribe to a stream of
   posture-change events, or pull the last known snapshot on demand.
-- **Supplementary data**: the OS-reported hinge angle and screen orientation
-  (`portrait` / `landscape`) travel alongside the posture in the payload. The
-  stage is authoritative; the angle is informational only.
+- **Supplementary data**: the OS-reported hinge angle travels alongside the
+  posture in the payload. The stage is authoritative; the angle is
+  informational only.
 - **Resilient startup**: the Dart stream waits out the implicit-engine
   registration race instead of dying on a one-shot `MissingPluginException`.
 - **Stage-driven UI**: the hinge illustration opens to a fixed pose per stage
@@ -72,48 +72,31 @@ Event payload (a map):
 
 ```jsonc
 {
-  "stage":       "half_open",   // closed | half_open | fully_open | unknown
-  "hingeAngle":  92.0,          // OS-reported degrees (supplementary)
-  "orientation": "portrait",    // portrait | landscape | unknown
-  "timestamp":   1700000000000  // ms since epoch
+  "stage":      "half_open",   // closed | half_open | fully_open | unknown
+  "hingeAngle": 92.0,          // OS-reported degrees (supplementary)
+  "timestamp":  1700000000000  // ms since epoch
 }
 ```
 
 ## Architecture
 
-```
-iOS (native, Swift)                        Flutter (Dart)
-─────────────────────────────────         ──────────────────────────────
-HingeObserver.swift                        fold_state_service.dart
-  SwiftUI .onHingeChange  ──┐                EventChannel  com.duo/fold_events
-  (discrete DeviceHinge)    │                MethodChannel com.duo/fold
-  + .onGeometryChange       │                        ▲
-   (orientation)            ▼                        │
-FoldStateMonitor.shared ────────────────────────────┘
-  emits only on posture /                 fold_state.dart
-  orientation change        │                FoldState / FoldStage / ScreenOrientation
-FoldChannelBridge.swift ────┘                        │
-  registers channels on the            main.dart
-  implicit-engine messenger              stage-driven dashboard UI
-```
+![Architecture](screenshots/Architecture.jpeg)
 
 ### Key files
 
-- `ios/Runner/HingeObserver.swift` — SwiftUI observer using `onHingeChange`
-  (discrete posture) and `onGeometryChange` (orientation), hosted invisibly in
-  the Flutter view hierarchy (required for the OS to deliver hinge events).
-  Gated behind `#if canImport(SwiftUI, _version: 8.0.85)` and
-  `@available(iOS 27.1, *)`.
+- `ios/Runner/HingeObserver.swift` — SwiftUI observer using `onHingeChange`,
+  hosted invisibly in the Flutter view hierarchy (required for the OS to
+  deliver hinge events). Gated behind `#if canImport(SwiftUI, _version: 8.0.85)`
+  and `@available(iOS 27.1, *)`.
 - `ios/Runner/FoldStateMonitor.swift` — event sink; caches the last state and
-  emits a `FoldState` only when the stage or orientation changes.
+  emits a `FoldState` only when the stage changes.
 - `ios/Runner/FoldChannelBridge.swift` — registers the `MethodChannel` and
   `EventChannel` on the implicit engine's binary messenger.
 - `ios/Runner/SceneDelegate.swift` — installs the hinge observer once the scene
   connects.
 - `ios/Runner/AppDelegate.swift` — registers the channel bridge in
   `didInitializeImplicitFlutterEngine`.
-- `lib/fold_state.dart` — `FoldState` model, `FoldStage` and `ScreenOrientation`
-  enums.
+- `lib/fold_state.dart` — `FoldState` model and `FoldStage` enum.
 - `lib/fold_state_service.dart` — Dart gateway over the two channels, with the
   resilient-startup stream.
 - `lib/main.dart` — the stage-driven dashboard UI.
@@ -149,9 +132,8 @@ final service = FoldStateService();
 
 // Subscribe to posture-change events.
 service.stream.listen((state) {
-  print('posture: ${state.stage.label}');       // Closed / Half-Open / Fully Open
-  print('screen:  ${state.orientation.label}');  // Portrait / Landscape
-  print('angle:   ${state.hingeAngle}');         // supplementary, OS-reported
+  print('posture: ${state.stage.label}');  // Closed / Half-Open / Fully Open
+  print('angle:   ${state.hingeAngle}');   // supplementary, OS-reported
 });
 
 // Or pull the last known snapshot once.
