@@ -1,4 +1,17 @@
-# Duo — Fold Monitor
+# iPhone Duo - Fold Monitor (Flutter)
+
+![Flutter App Template](https://img.shields.io/badge/Flutter-App_Template-02569B?logo=flutter&logoColor=white)
+![Platform iOS](https://img.shields.io/badge/platform-iOS-lightgrey?logo=apple&logoColor=white)
+![iOS 27.1+](https://img.shields.io/badge/iOS-27.1%2B-000000?logo=apple&logoColor=white)
+![License MIT](https://img.shields.io/badge/license-MIT-green)
+
+
+**A Flutter app template** for detecting iPhone Duo fold stages. Use it as a
+starting point to build your own app, or take the idea and drop it into an
+existing Flutter app to respond to the closed, half-open, and fully-open stages
+in a cleaner way. 
+
+##
 
 Detect **foldable device posture** in Flutter on iOS, driven by the real,
 event-driven system hinge API — not by guessing from accelerometer angles.
